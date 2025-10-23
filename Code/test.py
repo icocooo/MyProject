@@ -6,7 +6,7 @@ from sqlalchemy.testing.exclusions import compound
 import data_util1 as du
 from Code.MolecularGNN import MolecularGNN
 import csv
-def test_models():
+def compounds_feature_extract():
     """测试两个GNN模型"""
 
     # 初始化模型
@@ -69,8 +69,9 @@ def test_models():
     #
     #
     # return mol_features, protein_features
+def protein_feature_extract():
 
 
 # 运行测试
 if __name__ == "__main__":
-    test_models()
+    compounds_feature_extract()
