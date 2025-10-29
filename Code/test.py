@@ -4,6 +4,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from sqlalchemy.testing.exclusions import compound
 import data_util1 as du
+from Code import ProteinGNN
 from Code.MolecularGNN import MolecularGNN
 import csv
 def compounds_feature_extract():
@@ -70,8 +71,24 @@ def compounds_feature_extract():
     #
     # return mol_features, protein_features
 def protein_feature_extract():
+    path = '../Data/3HTB.pdb'
+    mol = Chem.MolFromPDBFile(path)
+    graph = du.protein_to_graph(mol)
+    x = graph["node_feat"]
 
+    model = ProteinGNN.ProteinFeatureExtractor(
+        node_dim=x.shape[1],
+        hidden_dim=128,           # 可以使用较小的维度
+        output_dim=512,
+        use_3d=False,             # 关键：禁用3D处理
+        pooling_method='mean'     # 使用简单的池化方法
+    )
+    x= torch.tensor(x, dtype=torch.float32)
+    edge_index = torch.tensor(graph["edge_index"], dtype=torch.long)
+    result = model(x,edge_index)
+    print(len(result[0]))
 
 # 运行测试
 if __name__ == "__main__":
-    compounds_feature_extract()
+    # compounds_feature_extract()
+    protein_feature_extract()
