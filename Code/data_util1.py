@@ -173,7 +173,33 @@ def ligand_atom_to_feature(atom):
             atom.GetImplicitValence(),
             int(atom.GetIsAromatic()),]
 
-def ligand_to_graph(ligand):
+def ligand_to_graph(ligand_smiles):
+    ligand=Chem.MolFromSmiles(ligand_smiles)
+
+    ligand = Chem.AddHs(ligand)
+
+    # 生成3D构象
+    try:
+        # 尝试多种构象生成方法
+        AllChem.EmbedMolecule(ligand, randomSeed=42)
+        AllChem.MMFFOptimizeMolecule(ligand)
+
+        # 检查是否有构象
+        if ligand.GetNumConformers() == 0:
+            # 如果构象生成失败，创建空坐标
+            num_atoms = ligand.GetNumAtoms()
+            coordinates = np.zeros((num_atoms, 3), dtype=np.float64)
+        else:
+            # 获取构象坐标
+            c = ligand.GetConformer()
+            coordinates = np.array([c.GetAtomPosition(i) for i in range(ligand.GetNumAtoms())])
+
+    except Exception as e:
+        print(f"构象生成失败 {ligand_smiles}: {e}")
+        # 创建空坐标作为备选
+        num_atoms = ligand.GetNumAtoms()
+        coordinates = np.zeros((num_atoms, 3), dtype=np.float64)
+
     # atom
     atoms_feature_list = [ligand_atom_to_feature(atom) for atom in ligand.GetAtoms()]
     node_features = np.array(atoms_feature_list, dtype = np.float64)
@@ -200,7 +226,7 @@ def ligand_to_graph(ligand):
             "num_nodes": node_features.shape[0],
             "edge_index": edge_index,
             "node_positions": node_positions}
-
+    print('创建成功')
     return graph
 
 

@@ -1,8 +1,9 @@
+import os
+
 import numpy as np
 import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from sqlalchemy.testing.exclusions import compound
 import data_util1 as du
 from Code import ProteinGNN
 from Code.MolecularGNN import MolecularGNN
@@ -90,5 +91,5 @@ def protein_feature_extract():
 
 # 运行测试
 if __name__ == "__main__":
-    # compounds_feature_extract()
-    protein_feature_extract()
+    x=os.listdir('./')
+    print(x)
