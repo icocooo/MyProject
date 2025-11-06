@@ -1,3 +1,5 @@
+import os
+
 import dgl
 import pandas as pd
 import torch
@@ -11,20 +13,46 @@ if torch.cuda.is_available():
 
 
 class DTIDataset(Dataset):
-    def __init__(self, dataset='Davis'):
-        self.dataset = dataset
+    def __init__(self, dataset='Davis', compound_graph=None, compound_id=None, protein_graph=None,
+                 protein_embedding=None, protein_id=None, label=None):
+        protein_dir = 'data/Davis/processed/protein_graph/'
+        compound_dir = 'data/Davis/processed/compound_graph/'
+        embedding_dir = 'data/Davis/processed/ESM_embedding_pocket/'
+        csv_path = 'data/Davis/Davis.csv'
+        self.df = pd.read_csv(csv_path, usecols=['COMPOUND_ID', 'PROTEIN_ID', 'REG_LABEL'],dtype='str')
 
-        pass
+        self.protein_graph_map = {}
+        for id in os.listdir(protein_dir):
+            id = id.removesuffix('.bin')
+            protein_graph, _ = load_graphs(protein_dir + str(id) + '.bin')
+            self.protein_graph_map[id] = protein_graph[0]
 
+        self.compound_graph_map = {}
+        for id in os.listdir(compound_dir):
+            id = id.removesuffix('.bin')
+            compound_graph, _ = load_graphs(compound_dir + str(id) + '.bin')
+            self.compound_graph_map[id] = compound_graph[0]
+
+        self.embedding_map = {}
+        for id in os.listdir(embedding_dir):
+            id = id.removesuffix('.npy')
+            self.embedding_map[id] = np.load(embedding_dir + str(id) + '.npy', allow_pickle=True)
     def __len__(self):
-        return len(self.label)
+        return len(self.df)
 
 
     def __getitem__(self, idx):
-
-        compound_len = self.compound_graph[idx].num_nodes()
-        protein_len = self.protein_graph[idx].num_nodes()
-        return self.compound_graph[idx], self.protein_graph[idx], self.protein_embedding[idx], compound_len, protein_len, self.label[idx]
+        row = self.df.iloc[idx]
+        compound_graph_id = row['COMPOUND_ID']
+        protein_graph_id = row['PROTEIN_ID']
+        label = row['REG_LABEL']
+        self.compound_graph = self.compound_graph_map[compound_graph_id]
+        self.protein_graph = self.protein_graph_map[protein_graph_id]
+        self.compound_graph = self.compound_graph_map[compound_graph_id]
+        self.embedding = self.embedding_map[protein_graph_id]
+        compound_len = self.compound_graph.num_nodes()
+        protein_len = self.protein_graph.num_nodes()
+        return self.compound_graph, self.protein_graph, self.embedding, compound_len, protein_len, label
 
 
     def collate(self, sample):
