@@ -1,12 +1,17 @@
+import sys
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import dgl
-import models.gt_net_compound, models.gt_net_protein
+
+from Code import gt_net_compound, gt_net_protein
 
 # 设备配置：优先使用GPU加速计算
 if torch.cuda.is_available():
     device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 
 class SelfAttention(nn.Module):
@@ -189,10 +194,17 @@ class MDGTDTInet(nn.Module):
         """
         # 第一阶段: 化合物特征提取
         # 通过图Transformer编码器提取化合物图特征
+        print()
         compound_feat = self.compound_gt(compound_graph)
+        max_num_nodes = int(compound_graph.batch_num_nodes().max())
+        print(compound_graph.batch_num_nodes())
+        print(max_num_nodes)
+        print(compound_feat.shape)
         # 重新组织特征张量为批次格式
         compound_feat_x = self.dgl_split(compound_graph, compound_feat)
         compound_feats = compound_feat_x
+        print(compound_feats.shape)
+        sys.exit(0)
 
         # 第二阶段: 蛋白质特征提取与融合
         # 提取蛋白质图结构特征

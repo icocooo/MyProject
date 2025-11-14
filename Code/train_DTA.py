@@ -8,9 +8,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.metrics import mean_squared_error, r2_score
 
+from Code.net import MDGTDTInet
 from metrics import *
 from DTIDataset import DTIDataset
-import MyModel
+
 device = torch.device('cpu')
 
 def train(model, device, train_loader, optimizer):
@@ -19,9 +20,11 @@ def train(model, device, train_loader, optimizer):
     for batch_idx, data in enumerate(train_loader):
         label = data[-1].to(device)
         compound_graph, protein_graph, protein_embedding = data[:-1]
+        # 移到设备上
         compound_graph = compound_graph.to(device)
         protein_graph = protein_graph.to(device)
         protein_embedding = protein_embedding.to(device)
+
         output = model(compound_graph, protein_graph,  protein_embedding)
         loss = criterion(output, label.view(-1, 1).float().to(device))
         optimizer.zero_grad()
@@ -63,14 +66,14 @@ if __name__ == '__main__':
     epochs = 1000
     batch = 4
     lr = 1e-4
-    train_dir = file_path + '/train/fold/' + str(fold)
-    test_dir = file_path + '/test/fold/' + str(fold)
-    train_set = DTIDataset()
 
+    train_set = DTIDataset(mode='train')
+    test_set = DTIDataset(mode='test')
 
     train_loader = DataLoader(train_set, batch_size=batch, shuffle=True, collate_fn=train_set.collate, drop_last=True)
+    test_loader = DataLoader(test_set, batch_size=batch, shuffle=False, collate_fn=test_set.collate, drop_last=True)
 
-    model = MyModel.AffinityPredictionModel(compound_dim=128, protein_dim=128, gt_layers=10, gt_heads=8, out_dim=1)
+    model = MDGTDTInet(compound_dim=128, protein_dim=128, gt_layers=10, gt_heads=8, out_dim=1)
     model.to(device)
 
     start = timeit.default_timer()
@@ -81,7 +84,7 @@ if __name__ == '__main__':
     file_model = 'model_save/' + dataset + '/fold/' + str(fold) + '/'
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.8, patience=80,  min_lr=1e-5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.8, patience=80, min_lr=1e-5)
     criterion = nn.MSELoss()
 
     Indexes = ('Epoch\t\tTime\t\tMSE\t\tRMSE\t\tCI\t\tr2')
@@ -89,10 +92,10 @@ if __name__ == '__main__':
     """Start training."""
     print('Training on ' + dataset + ', fold:' + str(fold))
     print(Indexes)
-    device = 'cpu'
+
     for epoch in range(epochs):
         train(model, device, train_loader, optimizer)
-        mse_test, rmse_test, ci_test, rm2_test = test(model, device)
+        mse_test, rmse_test, ci_test, rm2_test = test(model, device, test_loader)
         scheduler.step(mse_test)
         end = timeit.default_timer()
         time = end - start
@@ -105,3 +108,4 @@ if __name__ == '__main__':
             best_epoch = epoch + 1
             best_mse = mse_test
             print('MSE improved at epoch ', best_epoch, ';\tbest_mse:', best_mse)
+

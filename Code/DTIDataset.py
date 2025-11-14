@@ -15,12 +15,16 @@ else:
 
 
 class DTIDataset(Dataset):
-    def __init__(self, dataset='Davis', compound_graph=None, compound_id=None, protein_graph=None,
-                 protein_embedding=None, protein_id=None, label=None):
-        protein_dir = './data/Davis/processed/protein_graph/'
-        compound_dir = './data/Davis/processed/compound_graph/'
-        embedding_dir = './data/Davis/processed/ESM_embedding_pocket/'
-        csv_path = './data/Davis/Davis.csv'
+    def __init__(self,mode='train'):
+        dir = '/home/icoco/PycharmProjects/MyProject/'
+        protein_dir = dir + 'data/Davis/processed/pocket_graph/'
+        compound_dir = dir + 'data/Davis/processed/compound_graph/'
+        embedding_dir = dir + 'data/Davis/processed/ESM_embedding_pocket/'
+        csv_path = dir + 'data/Davis/Davis.csv'
+        if mode == 'train':
+            csv_path = dir + 'data/Davis/train.csv'
+        else:
+            csv_path = dir + 'data/Davis/test.csv'
         self.df = pd.read_csv(csv_path, usecols=['COMPOUND_ID', 'PROTEIN_ID', 'REG_LABEL'],dtype='str')
 
         self.protein_graph_map = {}
@@ -53,16 +57,16 @@ class DTIDataset(Dataset):
         self.compound_graph = self.compound_graph_map[compound_graph_id]
         self.embedding = self.embedding_map[protein_graph_id]
 
-
         compound_len = self.compound_graph.num_nodes()
         protein_len = self.protein_graph.num_nodes()
-        return self.compound_graph, self.protein_graph, self.embedding ,compound_len, protein_len, float(label)
+
+        return self.compound_graph, self.protein_graph ,self.embedding,compound_len, protein_len, float(label)
 
 
     def collate(self, sample):
         batch_size = len(sample)
 
-        compound_graph, protein_graph, protein_embedding,compound_len, protein_len, label = map(list, zip(*sample))
+        compound_graph, protein_graph,protein_embedding, compound_len,protein_len, label = map(list, zip(*sample))
         max_protein_len = max(protein_len)
 
         for i in range(batch_size):
@@ -70,9 +74,9 @@ class DTIDataset(Dataset):
                 protein_embedding[i] = np.pad(protein_embedding[i], ((0, max_protein_len-protein_embedding[i].shape[0]), (0, 0)), mode='constant', constant_values = (0,0))
 
         compound_graph = dgl.batch(compound_graph).to(device)
-
         protein_graph = dgl.batch(protein_graph).to(device)
         label = torch.FloatTensor(label).to(device)
         protein_embedding = torch.FloatTensor(protein_embedding).to(device)
-        return compound_graph, protein_graph, protein_embedding,label
+
+        return compound_graph, protein_graph,protein_embedding,label
 
