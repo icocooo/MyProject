@@ -54,7 +54,6 @@ class DTIDataset(Dataset):
         label = row['REG_LABEL']
         self.compound_graph = self.compound_graph_map[compound_graph_id]
         self.protein_graph = self.protein_graph_map[protein_graph_id]
-        self.compound_graph = self.compound_graph_map[compound_graph_id]
         self.embedding = self.embedding_map[protein_graph_id]
 
         compound_len = self.compound_graph.num_nodes()
@@ -75,6 +74,10 @@ class DTIDataset(Dataset):
 
         compound_graph = dgl.batch(compound_graph).to(device)
         protein_graph = dgl.batch(protein_graph).to(device)
+        compound_graph = dgl.add_self_loop(compound_graph)
+        protein_graph = dgl.add_self_loop(protein_graph)
+
+
         label = torch.FloatTensor(label).to(device)
         protein_embedding = torch.FloatTensor(protein_embedding).to(device)
 

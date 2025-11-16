@@ -1,3 +1,5 @@
+import datetime
+import sys
 import timeit
 
 import numpy as np
@@ -8,6 +10,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.metrics import mean_squared_error, r2_score
 
+from Code.MyModel import Model_Demo
 from Code.net import MDGTDTInet
 from metrics import *
 from DTIDataset import DTIDataset
@@ -20,12 +23,12 @@ def train(model, device, train_loader, optimizer):
     for batch_idx, data in enumerate(train_loader):
         label = data[-1].to(device)
         compound_graph, protein_graph, protein_embedding = data[:-1]
+
         # 移到设备上
         compound_graph = compound_graph.to(device)
         protein_graph = protein_graph.to(device)
         protein_embedding = protein_embedding.to(device)
-
-        output = model(compound_graph, protein_graph,  protein_embedding)
+        output = model(compound_graph, protein_graph)
         loss = criterion(output, label.view(-1, 1).float().to(device))
         optimizer.zero_grad()
         loss.backward()
@@ -43,7 +46,7 @@ def test(model, device, test_loader):
             compound_graph = compound_graph.to(device)
             protein_graph = protein_graph.to(device)
             protein_embedding = protein_embedding.to(device)
-            output = model(compound_graph, protein_graph, protein_embedding)
+            output = model(compound_graph, protein_graph)
             total_preds = torch.cat((total_preds, output.cpu()), 0)
             total_labels = torch.cat((total_labels, label.view(-1, 1).cpu()), 0)
 
@@ -69,11 +72,10 @@ if __name__ == '__main__':
 
     train_set = DTIDataset(mode='train')
     test_set = DTIDataset(mode='test')
-
+    strat = timeit.default_timer()
     train_loader = DataLoader(train_set, batch_size=batch, shuffle=True, collate_fn=train_set.collate, drop_last=True)
     test_loader = DataLoader(test_set, batch_size=batch, shuffle=False, collate_fn=test_set.collate, drop_last=True)
-
-    model = MDGTDTInet(compound_dim=128, protein_dim=128, gt_layers=10, gt_heads=8, out_dim=1)
+    model = Model_Demo()
     model.to(device)
 
     start = timeit.default_timer()
@@ -94,6 +96,7 @@ if __name__ == '__main__':
     print(Indexes)
 
     for epoch in range(epochs):
+        print(epoch)
         train(model, device, train_loader, optimizer)
         mse_test, rmse_test, ci_test, rm2_test = test(model, device, test_loader)
         scheduler.step(mse_test)

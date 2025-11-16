@@ -118,7 +118,7 @@ if __name__ == "__main__":
         output_size=128
     )
     dataset = DTIDataset()
-    test_graph = dataset[0][1]
+    test_graph = dataset[0][0]
     print(test_graph)
     print("图结构信息:")
     print(f"节点数: {test_graph.num_nodes()}")
